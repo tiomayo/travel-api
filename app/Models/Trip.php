@@ -4,6 +4,7 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Support\Facades\Cache;
 
 class Trip extends Model
 {
@@ -43,4 +44,23 @@ class Trip extends Model
     protected $casts = [
 
     ];
+
+    protected static function booted()
+    {
+        static::created(function ($model) {
+            if (Cache::has($model->user_id)) {
+                Cache::forget($model->user_id);
+            }
+        });
+        static::updated(function ($model) {
+            if (Cache::has($model->user_id)) {
+                Cache::forget($model->user_id);
+            }
+        });
+        static::deleted(function ($model) {
+            if (Cache::has($model->user_id)) {
+                Cache::forget($model->user_id);
+            }
+        });
+    }
 }

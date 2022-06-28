@@ -5,8 +5,10 @@ namespace App\Http\Controllers;
 use Exception;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response;
+use Illuminate\Support\Facades\Cache;
 use Tymon\JWTAuth\Facades\JWTAuth;
 use Illuminate\Support\Facades\Validator;
+use PDO;
 
 class TripController extends Controller
 {
@@ -16,7 +18,7 @@ class TripController extends Controller
     {
         try {
             $this->user = JWTAuth::parseToken()->authenticate();
-        } catch(Exception $e) {
+        } catch (Exception $e) {
             return $e;
         }
     }
@@ -24,13 +26,26 @@ class TripController extends Controller
     /**
      * Display a listing of the resource.
      *
+     * @param  \Illuminate\Http\Request  $request
      * @return \Illuminate\Http\Response
      */
-    public function index()
+    public function index(Request $request)
     {
-        return $this->user
-            ->trips()
-            ->get();
+        $this->validate($request, [
+            'title' => 'nullable|string',
+        ]);
+
+        $trips = Cache::remember($this->user->id, 60 * 60, function () {
+            return $this->user->trips()->get();
+        });
+
+        if (!empty($request['title'])) {
+            $trips = $trips->filter(function ($trip) use ($request) {
+                return str_contains(strtolower($trip->title), strtolower($request['title']));
+            })->all();
+        }
+
+        return $trips;
     }
 
     /**
